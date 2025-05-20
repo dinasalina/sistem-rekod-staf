@@ -7,6 +7,7 @@ use App\Enums\UserRole; // Tambah import ini
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\StaffDetail; // <-- TAMBAH BARIS INI
 
 class User extends Authenticatable
 {
@@ -47,5 +48,10 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class, // Tambah cast ini
         ];
+    }
+
+    public function staffDetail() // Nama method ni penting, ikut konvensyen Laravel
+    {
+        return $this->hasOne(StaffDetail::class);
     }
 }

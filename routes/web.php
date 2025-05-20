@@ -21,6 +21,8 @@ Route::middleware('auth')->group(function () {
 
 // Laluan untuk Super Admin SAHAJA
 Route::middleware(['auth', 'role:'.UserRole::SUPER_ADMIN->value])->group(function () {
+    
+     
     Route::get('/superadmin/settings', function () {
         return 'Halaman Tetapan Super Admin';
     })->name('superadmin.settings');
@@ -29,6 +31,15 @@ Route::middleware(['auth', 'role:'.UserRole::SUPER_ADMIN->value])->group(functio
 
 // Laluan untuk Admin SAHAJA
 Route::middleware(['auth', 'role:'.UserRole::ADMIN->value])->group(function () {
+    
+    // LALUAN BARU UNTUK PAPARKAN BORANG TAMBAH STAF
+    Route::get('/admin/staf/create', [StaffController::class, 'create'])->name('admin.staf.create');
+
+     // LALUAN BARU UNTUK SIMPAN DATA STAF BARU (dari borang)
+    Route::post('/admin/staf', [StaffController::class, 'store'])->name('admin.staf.store');
+    //     ^^^^ Method POST
+    //          ^^^^ URLnya boleh sama dengan senarai (jika guna method berbeza) atau lain. '/admin/staf' adalah konvensyen.
+
     // UBAH LALUAN INI:
     Route::get('/admin/manage-staff', [StaffController::class, 'index'])->name('admin.manage');
     // 'StaffController::class' merujuk kepada controller yang kita import

@@ -30,7 +30,8 @@ class StaffController extends Controller
      */
     public function create()
     {
-        //
+        //Kita akan cipta view ini pada langkah seterusnya
+        return view('admin.staff.create');
     }
 
     /**

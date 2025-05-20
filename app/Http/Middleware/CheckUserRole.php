@@ -24,6 +24,16 @@ class CheckUserRole
 
         $user = Auth::user();
 
+        // LETAKKAN BLOK dd() DI SINI:
+    // dd(
+    //     'Nilai $user->role->value (dari DB/Enum):', $user->role->value,
+    //     'Nilai $roles (diterima dari route):', $roles,
+    //     'Objek Enum $user->role:', $user->role,
+    //     'Adakah $user->role === UserRole::ADMIN ? (Perbandingan Enum):', $user->role === \App\Enums\UserRole::ADMIN,
+    //     'Adakah $user->role === UserRole::SUPER_ADMIN ? (Perbandingan Enum):', $user->role === \App\Enums\UserRole::SUPER_ADMIN
+    // );
+    // // AKHIR BLOK dd()
+
         foreach ($roles as $role) {
             // Bandingkan nilai string dari Enum
             if ($user->role->value === $role) {
