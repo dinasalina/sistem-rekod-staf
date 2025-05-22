@@ -106,9 +106,16 @@ class StaffController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+     public function show(User $user) // Laravel akan secara automatik cari User berdasarkan {user} dalam URL
     {
-        //
+        // Pastikan kita ada data staffDetail untuk user ini juga.
+        // Eloquent akan lazy load jika kita akses $user->staffDetail,
+        // tapi untuk kepastian atau jika banyak data nak dipaparkan, lebih baik muatkan secara eksplisit.
+        $user->load('staffDetail'); 
+
+        // Hantar data $user (yang kini sepatutnya ada staffDetail) ke view paparan detail
+        // Kita akan cipta view 'admin.staff.show' pada langkah seterusnya (14.D)
+        return view('admin.staff.show', compact('user'));
     }
 
     /**

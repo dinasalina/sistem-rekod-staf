@@ -54,6 +54,12 @@ Route::middleware(['auth', 'role:'.UserRole::ADMIN->value])->group(function () {
     //                                 ^^^^^^^ Method 'destroy' dalam StaffController
     //                                               ^^^^^^^^^^^^^^^^^^^ Nama route
 
+    // LALUAN UNTUK PAPARKAN DETAIL STAF (SHOW PAGE)
+    Route::get('/admin/staf/{user}', [StaffController::class, 'show'])->name('admin.staf.show');
+    //           ^^^^^^^^^^^^^^^^^ URL dengan parameter {user} (tanpa /show)
+    //                              ^^^^^ Method 'show' dalam StaffController
+    //                                          ^^^^^^^^^^^^^^^^ Nama route
+
     // UBAH LALUAN INI:
     Route::get('/admin/manage-staff', [StaffController::class, 'index'])->name('admin.manage');
     // 'StaffController::class' merujuk kepada controller yang kita import
