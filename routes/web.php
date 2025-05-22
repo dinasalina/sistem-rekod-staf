@@ -40,6 +40,20 @@ Route::middleware(['auth', 'role:'.UserRole::ADMIN->value])->group(function () {
     //     ^^^^ Method POST
     //          ^^^^ URLnya boleh sama dengan senarai (jika guna method berbeza) atau lain. '/admin/staf' adalah konvensyen.
 
+     // LALUAN BARU UNTUK PAPARKAN BORANG EDIT STAF
+    Route::get('/admin/staf/{user}/edit', [StaffController::class, 'edit'])->name('admin.staf.edit');
+    //           ^^^^^^^^^^^^^^^^^^^ URL dengan parameter {user}
+    //                              ^^^^^ Method 'edit' dalam StaffController
+    //                                          ^^^^^^^^^^^^^^^^^ Nama route
+    Route::put('/admin/staf/{user}', [StaffController::class, 'update'])->name('admin.staf.update');
+
+    // LALUAN UNTUK PROSES PADAM DATA STAF
+    Route::delete('/admin/staf/{user}', [StaffController::class, 'destroy'])->name('admin.staf.destroy');
+    //       ^^^^^^^ Method DELETE
+    //               ^^^^^^^^^^^^^^^ URL dengan parameter {user}
+    //                                 ^^^^^^^ Method 'destroy' dalam StaffController
+    //                                               ^^^^^^^^^^^^^^^^^^^ Nama route
+
     // UBAH LALUAN INI:
     Route::get('/admin/manage-staff', [StaffController::class, 'index'])->name('admin.manage');
     // 'StaffController::class' merujuk kepada controller yang kita import

@@ -82,8 +82,21 @@
                                             {{ $staf->role->value }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-600">Edit</a>
-                                            <a href="#" class="ml-2 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-600">Padam</a>
+                                            <a href="{{ route('admin.staf.edit', ['user' => $staf->id]) }}" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-600">Edit</a>
+                                            {{-- <a href="#" class="ml-2 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-600">Padam</a> --}}
+
+                                            {{-- AWAL BORANG UNTUK PADAM --}}
+                                            <form method="POST" action="{{ route('admin.staf.destroy', ['user' => $staf->id]) }}" class="inline ml-2">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" 
+                                                        class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                                        onclick="return confirm('Anda pasti mahu padam staf ini? Maklumat yang dipadam tidak boleh dikembalikan.')">
+                                                    Padam
+                                                </button>
+                                            </form>
+                                            {{-- AKHIR BORANG UNTUK PADAM --}}
+                                            
                                         </td>
                                     </tr>
                                 @empty
