@@ -1,88 +1,102 @@
-<?php // WAJIB MULA DENGAN INI
+<?php
 
-namespace App\Http\Controllers\Admin; // Kemudian namespace
+namespace App\Http\Controllers\Admin;
 
-// Kemudian semua 'use' statements
-use Illuminate\Http\Request;
-use App\Models\User;
-use App\Models\StaffDetail;
-use App\Enums\UserRole;
-use App\Http\Controllers\Controller; // 'use' untuk base Controller
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rules\Password;
+// Import kelas-kelas yang diperlukan
+use App\Models\User; // Model untuk interaksi dengan jadual 'users'
+use App\Models\StaffDetail; // Model untuk interaksi dengan jadual 'staff_details'
+use App\Enums\UserRole; // Enum untuk pengurusan peranan pengguna yang konsisten
+use App\Http\Controllers\Controller; // Kelas Controller asas Laravel
+use Illuminate\Http\Request; // Untuk menguruskan HTTP request yang masuk
+use Illuminate\Support\Facades\Hash; // Untuk hashing kata laluan
+use Illuminate\Validation\Rule; // Untuk peraturan validasi yang lebih kompleks (cth: unique ignore)
+use Illuminate\Support\Facades\Storage; // Untuk pengurusan fail (cth: gambar profil)
+use Illuminate\Validation\Rules\Password; // Untuk peraturan validasi kata laluan standard Laravel
 
-// AKHIR SEKALI BARU CLASS DEFINITION
 class StaffController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Memaparkan senarai semua staf.
+     * Method ini dipanggil oleh route GET /admin/manage-staff (atau /admin/staf jika diubahsuai).
+     *
+     * @return \Illuminate\View\View
      */
     public function index()
     {
-        // Dapatkan semua pengguna yang mempunyai peranan 'staf'
-        // Kita akan guna pagination untuk paparan yang lebih kemas jika data banyak
+        // 1. Dapatkan semua pengguna yang mempunyai peranan 'staf'.
+        //    Disusun mengikut nama (A-Z) dan dipaparkan 10 rekod setiap halaman (pagination).
         $stafUsers = User::where('role', UserRole::STAF)
-                            ->orderBy('name', 'asc') // Susun ikut nama secara menaik (A-Z)
-                            ->paginate(10); // Paparkan 10 rekod setiap halaman
+                            ->orderBy('name', 'asc') 
+                            ->paginate(10); 
 
-        // Hantar data staf ke view 'admin.manage-staff'
-        // Pastikan view ini wujud: resources/views/admin/manage-staff.blade.php
+        // 2. Hantar data staf ke view untuk paparan.
+        //    View yang digunakan ialah 'admin.manage-staff'.
         return view('admin.manage-staff', compact('stafUsers'));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Memaparkan borang untuk mencipta staf baru.
+     * Method ini dipanggil oleh route GET /admin/staf/create.
+     *
+     * @return \Illuminate\View\View
      */
     public function create()
     {
-        //Kita akan cipta view ini pada langkah seterusnya
+        // Hanya paparkan view borang tambah staf.
+        // View: resources/views/admin/staff/create.blade.php
         return view('admin.staff.create');
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Menyimpan rekod staf yang baru dicipta ke dalam pangkalan data.
+     * Method ini dipanggil oleh route POST /admin/staf (dari borang tambah staf).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
-        // 1. Validasi Data Input dari Borang
+        // 1. Sahkan (validate) data input dari borang.
+        //    Jika validasi gagal, Laravel akan redirect pengguna kembali ke borang dengan ralat.
         $validatedData = $request->validate([
-            // Dari jadual 'users'
+            // Peraturan validasi untuk data pengguna (jadual 'users')
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', Password::defaults(), 'confirmed'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'], // Emel mesti unik
+            'password' => ['required', 'string', Password::defaults(), 'confirmed'], // Guna peraturan password default & pastikan ada pengesahan
 
-            // Dari jadual 'staff_details'
-            'staff_id_number' => ['nullable', 'string', 'max:255', 'unique:staff_details,staff_id_number'],
+            // Peraturan validasi untuk data detail staf (jadual 'staff_details')
+            'staff_id_number' => ['nullable', 'string', 'max:255', 'unique:staff_details,staff_id_number'], // ID Staf mesti unik jika diisi
             'department' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'string', 'max:255'],
             'phone_number' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string'],
             'date_joined' => ['nullable', 'date'],
-            'salary' => ['nullable', 'numeric', 'min:0'],
+            'salary' => ['nullable', 'numeric', 'min:0'], // Mesti nombor dan tidak kurang dari 0
             'bank_name' => ['nullable', 'string', 'max:255'],
             'bank_account_number' => ['nullable', 'string', 'max:50'],
             'emergency_contact_name' => ['nullable', 'string', 'max:255'],
             'emergency_contact_phone' => ['nullable', 'string', 'max:20'],
-            'profile_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'], // Validasi untuk gambar profil
+            'profile_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'], // Gambar: jenis, saiz max 2MB
         ]);
 
-        // 2. Cipta Rekod Pengguna (User) Baru
+        // 2. Cipta rekod pengguna (User) baru dalam jadual 'users'.
         $user = User::create([
             'name' => $validatedData['name'],
             'email' => $validatedData['email'],
-            'password' => Hash::make($validatedData['password']),
-            'role' => UserRole::STAF,
+            'password' => Hash::make($validatedData['password']), // Kata laluan di-hash sebelum disimpan
+            'role' => UserRole::STAF, // Tetapkan peranan sebagai STAF secara automatik
         ]);
 
-        // 3. Uruskan Muat Naik Gambar Profil (jika ada)
+        // 3. Uruskan muat naik gambar profil jika ada.
         $profileImagePath = null;
         if ($request->hasFile('profile_image')) {
+            // Simpan gambar dalam direktori 'storage/app/public/profile_images'
+            // Nama fail akan dijana secara unik oleh Laravel.
             $profileImagePath = $request->file('profile_image')->store('profile_images', 'public');
         }
 
-        // 4. Cipta Rekod StaffDetail Baru dan Sambungkan dengan User
+        // 4. Cipta rekod StaffDetail baru dan kaitkan dengan User yang baru dicipta.
+        //    Gunakan method relationship `staffDetail()` yang telah didefinisikan dalam model User.
         $user->staffDetail()->create([
             'staff_id_number' => $validatedData['staff_id_number'] ?? null,
             'department' => $validatedData['department'] ?? null,
@@ -95,60 +109,66 @@ class StaffController extends Controller
             'bank_account_number' => $validatedData['bank_account_number'] ?? null,
             'emergency_contact_name' => $validatedData['emergency_contact_name'] ?? null,
             'emergency_contact_phone' => $validatedData['emergency_contact_phone'] ?? null,
-            'profile_image_path' => $profileImagePath,
+            'profile_image_path' => $profileImagePath, // Simpan laluan gambar
         ]);
 
-        // 5. Redirect Admin ke Halaman Senarai Staf dengan Mesej Kejayaan
+        // 5. Redirect pengguna kembali ke halaman senarai staf (admin.manage)
+        //    berserta mesej kejayaan (flash message).
         return redirect()->route('admin.manage')->with('success', 'Staf baru berjaya didaftarkan!');
-    
     }
 
     /**
-     * Display the specified resource.
+     * Memaparkan maklumat terperinci untuk seorang staf.
+     * Method ini dipanggil oleh route GET /admin/staf/{user}.
+     *
+     * @param  \App\Models\User  $user // Objek User diambil secara automatik melalui Route Model Binding
+     * @return \Illuminate\View\View
      */
-     public function show(User $user) // Laravel akan secara automatik cari User berdasarkan {user} dalam URL
+    public function show(User $user)
     {
-        // Pastikan kita ada data staffDetail untuk user ini juga.
-        // Eloquent akan lazy load jika kita akses $user->staffDetail,
-        // tapi untuk kepastian atau jika banyak data nak dipaparkan, lebih baik muatkan secara eksplisit.
+        // 1. Muatkan data berkaitan dari `staffDetail` untuk pengguna ini (eager loading).
+        //    Walaupun boleh lazy load, ini lebih eksplisit.
         $user->load('staffDetail'); 
 
-        // Hantar data $user (yang kini sepatutnya ada staffDetail) ke view paparan detail
-        // Kita akan cipta view 'admin.staff.show' pada langkah seterusnya (14.D)
+        // 2. Hantar data $user (yang kini mengandungi staffDetail) ke view.
+        //    View: resources/views/admin/staff/show.blade.php
         return view('admin.staff.show', compact('user'));
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Memaparkan borang untuk mengemaskini maklumat staf sedia ada.
+     * Method ini dipanggil oleh route GET /admin/staf/{user}/edit.
+     *
+     * @param  \App\Models\User  $user // Objek User diambil secara automatik melalui Route Model Binding
+     * @return \Illuminate\View\View
      */
-    public function edit(User $user) // Laravel akan secara automatik cari User berdasarkan {user} dalam URL
+    public function edit(User $user)
     {
-        // Pastikan kita ada data staffDetail untuk user ini
-        // Eloquent akan lazy load jika kita akses $user->staffDetail,
-        // tapi kalau nak pastikan ia dimuatkan (eager load), boleh guna:
+        // 1. Muatkan data berkaitan dari `staffDetail` untuk pengguna ini.
         $user->load('staffDetail'); 
 
-        // Hantar data $user (yang kini sepatutnya ada staffDetail) ke view borang edit
-        // Kita akan cipta view 'admin.staff.edit' pada langkah seterusnya
+        // 2. Hantar data $user ke view borang edit.
+        //    View: resources/views/admin/staff/edit.blade.php
         return view('admin.staff.edit', compact('user'));
-    
     }
 
     /**
-     * Update the specified resource in storage.
+     * Mengemaskini maklumat staf sedia ada dalam pangkalan data.
+     * Method ini dipanggil oleh route PUT/PATCH /admin/staf/{user} (dari borang edit).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\User  $user // Objek User diambil secara automatik melalui Route Model Binding
+     * @return \Illuminate\Http\RedirectResponse
      */
-    public function update(Request $request, User $user) // $user akan jadi objek User yang nak dikemaskini
+    public function update(Request $request, User $user)
     {
-        // 1. Validasi Data Input
-        // Peraturan validasi hampir sama dengan store(), tapi untuk 'unique' kita perlu abaikan rekod semasa
+        // 1. Sahkan (validate) data input dari borang edit.
         $validatedData = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'password' => ['nullable', 'string', Password::defaults(), 'confirmed'], // Password kini nullable, hanya validate jika diisi
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)], // Abaikan ID pengguna semasa untuk semakan unik emel
+            'password' => ['nullable', 'string', Password::defaults(), 'confirmed'], // Kata laluan kini 'nullable' (tidak wajib diisi)
 
-            // Dari jadual 'staff_details'
-            // Untuk staff_id_number, kita perlu pastikan ia unik KECUALI untuk staff_detail milik user ini sendiri
-            'staff_id_number' => ['nullable', 'string', 'max:255', Rule::unique('staff_details')->ignore($user->staffDetail?->id)],
+            'staff_id_number' => ['nullable', 'string', 'max:255', Rule::unique('staff_details')->ignore($user->staffDetail?->id)], // Abaikan rekod staffDetail semasa
             'department' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'string', 'max:255'],
             'phone_number' => ['nullable', 'string', 'max:20'],
@@ -162,17 +182,16 @@ class StaffController extends Controller
             'profile_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
 
-        // 2. Kemaskini Rekod Pengguna (User)
+        // 2. Kemaskini rekod dalam jadual 'users'.
         $user->name = $validatedData['name'];
         $user->email = $validatedData['email'];
-        // Hanya kemaskini password jika diisi
+        // Hanya kemaskini kata laluan jika medan kata laluan diisi dalam borang.
         if (!empty($validatedData['password'])) {
             $user->password = Hash::make($validatedData['password']);
         }
-        $user->save(); // Simpan perubahan pada User
+        $user->save(); // Simpan perubahan pada rekod User
 
-        // 3. Kemaskini atau Cipta Rekod StaffDetail
-        // Kita guna updateOrCreate untuk handle kes jika staffDetail belum wujud (walaupun sepatutnya dah wujud)
+        // 3. Sediakan data untuk dikemaskini dalam jadual 'staff_details'.
         $staffDetailData = [
             'staff_id_number' => $validatedData['staff_id_number'] ?? null,
             'department' => $validatedData['department'] ?? null,
@@ -187,56 +206,55 @@ class StaffController extends Controller
             'emergency_contact_phone' => $validatedData['emergency_contact_phone'] ?? null,
         ];
 
-        // 4. Uruskan Kemaskini Gambar Profil (jika ada gambar baru dimuat naik)
+        // 4. Uruskan kemaskini gambar profil jika ada gambar baru dimuat naik.
         if ($request->hasFile('profile_image')) {
-            // Padam gambar lama jika ada
+            // Padam gambar profil lama dari storage jika wujud.
             if ($user->staffDetail && $user->staffDetail->profile_image_path) {
                 Storage::disk('public')->delete($user->staffDetail->profile_image_path);
             }
-            // Simpan gambar baru dan dapatkan laluannya
+            // Simpan gambar baru dan dapatkan laluannya.
             $staffDetailData['profile_image_path'] = $request->file('profile_image')->store('profile_images', 'public');
         }
 
-        // Kemaskini atau cipta StaffDetail
-        // Jika $user->staffDetail belum ada, ia akan cipta baru
-        // Jika dah ada, ia akan kemaskini
+        // 5. Kemaskini (atau cipta jika belum ada) rekod dalam 'staff_details'.
+        //    `updateOrCreate` akan cari rekod dengan `user_id`, jika jumpa ia update, jika tidak ia create.
         $user->staffDetail()->updateOrCreate(
-            ['user_id' => $user->id], // Syarat untuk cari rekod sedia ada
+            ['user_id' => $user->id], // Syarat untuk mencari/mencipta
             $staffDetailData // Data untuk dikemaskini atau dicipta
         );
 
-        // 5. Redirect Admin ke Halaman Senarai Staf dengan Mesej Kejayaan
+        // 6. Redirect pengguna kembali ke halaman senarai staf (admin.manage)
+        //    berserta mesej kejayaan.
         return redirect()->route('admin.manage')->with('success', 'Maklumat staf berjaya dikemaskini!');
     }
 
-
     /**
-     * Remove the specified resource from storage.
+     * Memadam rekod staf dari pangkalan data.
+     * Method ini dipanggil oleh route DELETE /admin/staf/{user}.
+     *
+     * @param  \App\Models\User  $user // Objek User diambil secara automatik melalui Route Model Binding
+     * @return \Illuminate\Http\RedirectResponse
      */
-     public function destroy(User $user) // $user adalah objek User yang akan dipadam
+    public function destroy(User $user)
     {
-        // 1. Semak jika pengguna ini adalah STAF (langkah keselamatan tambahan, walaupun route dah dilindungi)
+        // 1. (Pilihan Keselamatan Tambahan) Pastikan hanya pengguna dengan peranan STAF yang dipadam.
         if ($user->role->value !== UserRole::STAF->value) {
-            // Mungkin redirect dengan ralat jika bukan staf, atau biarkan sahaja jika route dah cukup selamat
             return redirect()->route('admin.manage')->with('error', 'Hanya pengguna dengan peranan staf boleh dipadam melalui fungsi ini.');
         }
 
-        // 2. Padam gambar profil dari storage jika ada
+        // 2. Padam gambar profil staf dari storage jika wujud.
         if ($user->staffDetail && $user->staffDetail->profile_image_path) {
             Storage::disk('public')->delete($user->staffDetail->profile_image_path);
         }
 
-        // 3. Padam rekod User.
-        // Oleh sebab kita dah set 'onDelete('cascade')' pada foreign key 'user_id' 
-        // dalam migration 'create_staff_details_table',
-        // rekod dalam 'staff_details' yang berkaitan akan dipadam secara automatik.
-        // Jika tiada cascade, kita perlu padam staffDetail dulu:
-        // if ($user->staffDetail) {
-        //     $user->staffDetail->delete();
-        // }
+        // 3. Padam rekod User dari jadual 'users'.
+        //    Disebabkan 'onDelete('cascade')' pada foreign key 'user_id' dalam
+        //    migration 'create_staff_details_table', rekod StaffDetail yang berkaitan
+        //    akan dipadam secara automatik oleh pangkalan data.
         $user->delete();
 
-        // 4. Redirect Admin ke Halaman Senarai Staf dengan Mesej Kejayaan
+        // 4. Redirect pengguna kembali ke halaman senarai staf (admin.manage)
+        //    berserta mesej kejayaan.
         return redirect()->route('admin.manage')->with('success', 'Maklumat staf telah berjaya dipadam.');
     }
 }
