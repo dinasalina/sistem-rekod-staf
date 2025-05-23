@@ -10,10 +10,11 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900 dark:text-gray-100">
-                    {{ __("Selamat datang ke halaman Tetapan Super Admin!") }}
-                    {{-- Di sini awak boleh letak kandungan khusus untuk Super Admin --}}
-                    <p>Anda log masuk sebagai: {{ Auth::user()->name }}</p>
-                    <p>Peranan Anda: {{ Auth::user()->role->value }}</p>
+                    {{ __("Selamat datang ke halaman tetapan Super Admin!") }}
+                    <p class="mt-4">
+                        {{-- Di sini nanti kita boleh letak fungsi-fungsi khas untuk Super Admin --}}
+                         Senarai Pengurus (Admin), Tetapan Sistem, dll.
+                    </p>
                 </div>
             </div>
         </div>

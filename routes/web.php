@@ -3,115 +3,84 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\StaffController; 
-use App\Enums\UserRole; // Import Enum jika guna nilai Enum secara terus
+use App\Enums\UserRole;
 use App\Http\Controllers\StaffSelfProfileController; 
-use Illuminate\Support\Facades\Auth; // Pastikan Auth diimport
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
+// Laluan untuk Dashboard - kini hanya ada satu definisi yang menguruskan peranan
 Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
-Route::get('/dashboard', function () {
+    /** @var \App\Models\User $user */
     $user = Auth::user();
 
-    if ($user->role->value === UserRole::STAF->value) {
-        // Jika pengguna adalah STAF, paparkan dashboard khas untuk staf
-        // Kita akan hantar data $user ke view ini juga
-        // View 'staf.dashboard' akan kita cipta pada langkah seterusnya
+    if ($user && $user->role->value === UserRole::STAF->value) {
         return view('staf.dashboard', ['user' => $user->load('staffDetail')]); 
-    } elseif ($user->role->value === UserRole::ADMIN->value) {
-        // Jika pengguna adalah ADMIN, redirect ke halaman utama admin
-        return redirect()->route('admin.staf.index'); // Atau 'admin.manage' jika awak masih guna nama tu
-    } elseif ($user->role->value === UserRole::SUPER_ADMIN->value) {
-        // Jika pengguna adalah SUPER ADMIN, redirect ke halaman utama super admin
-        return redirect()->route('superadmin.settings'); // Atau route utama super admin lain
+    } elseif ($user && $user->role->value === UserRole::ADMIN->value) {
+        return redirect()->route('admin.manage'); // Pastikan nama route ini betul
+    } elseif ($user && $user->role->value === UserRole::SUPER_ADMIN->value) {
+        // Kita akan redirect ke 'superadmin.settings' yang baru
+        return redirect()->route('superadmin.settings'); 
     }
-
-    // Fallback untuk pengguna lain yang disahkan tapi tiada peranan spesifik (jarang berlaku dalam kes kita)
-    // atau jika dashboard ini juga digunakan oleh peranan lain yang tidak perlukan redirect.
-    return view('dashboard'); // Paparkan dashboard Breeze generik
-
+    return view('dashboard'); // Fallback
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+Route::middleware('auth')->name('profile.')->group(function () { // Ditambah name prefix untuk konsistensi
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('destroy');
 });
 
 // Laluan untuk Super Admin SAHAJA
-Route::middleware(['auth', 'role:'.UserRole::SUPER_ADMIN->value])->group(function () {
+Route::middleware(['auth', 'role:'.UserRole::SUPER_ADMIN->value])
+    ->prefix('superadmin') // Semua URL akan mula dengan /superadmin
+    ->name('superadmin.') // Semua nama route akan mula dengan superadmin.
+    ->group(function () {
     
-     
-    Route::get('/superadmin/settings', function () {
-        return 'Halaman Tetapan Super Admin';
-    })->name('superadmin.settings');
-    // Tambah laluan super admin lain di sini
+    Route::get('/settings', function () { // URL akan jadi /superadmin/settings
+        // TUKAR INI untuk paparkan view
+        return view('superadmin.settings'); 
+    })->name('settings'); // Nama route akan jadi superadmin.settings
+    
+    // Tambah laluan super admin lain di sini nanti
 });
 
 // Laluan untuk Admin SAHAJA
-Route::middleware(['auth', 'role:'.UserRole::ADMIN->value])->group(function () {
+Route::middleware(['auth', 'role:'.UserRole::ADMIN->value])
+    ->prefix('admin') // Menetapkan prefix URL /admin untuk group ini
+    ->name('admin.') // Menetapkan prefix nama route admin. untuk group ini
+    ->group(function () {
     
-    // LALUAN BARU UNTUK PAPARKAN BORANG TAMBAH STAF
-    Route::get('/admin/staf/create', [StaffController::class, 'create'])->name('admin.staf.create');
+    // Kumpulan laluan khusus untuk pengurusan Staf
+    Route::prefix('staf')->name('staf.')->group(function() {
+        // Nota: Route untuk senarai staf masih 'admin.manage' di sini seperti kod asal awak.
+        // Jika nak ikut cadangan refactor penuh, ini akan jadi Route::get('/', ...)->name('index');
+        // dan nama route jadi 'admin.staf.index'
 
-     // LALUAN BARU UNTUK SIMPAN DATA STAF BARU (dari borang)
-    Route::post('/admin/staf', [StaffController::class, 'store'])->name('admin.staf.store');
-    //     ^^^^ Method POST
-    //          ^^^^ URLnya boleh sama dengan senarai (jika guna method berbeza) atau lain. '/admin/staf' adalah konvensyen.
-
-     // LALUAN BARU UNTUK PAPARKAN BORANG EDIT STAF
-    Route::get('/admin/staf/{user}/edit', [StaffController::class, 'edit'])->name('admin.staf.edit');
-    //           ^^^^^^^^^^^^^^^^^^^ URL dengan parameter {user}
-    //                              ^^^^^ Method 'edit' dalam StaffController
-    //                                          ^^^^^^^^^^^^^^^^^ Nama route
-    Route::put('/admin/staf/{user}', [StaffController::class, 'update'])->name('admin.staf.update');
-
-    // LALUAN UNTUK PROSES PADAM DATA STAF
-    Route::delete('/admin/staf/{user}', [StaffController::class, 'destroy'])->name('admin.staf.destroy');
-    //       ^^^^^^^ Method DELETE
-    //               ^^^^^^^^^^^^^^^ URL dengan parameter {user}
-    //                                 ^^^^^^^ Method 'destroy' dalam StaffController
-    //                                               ^^^^^^^^^^^^^^^^^^^ Nama route
-
-    // LALUAN UNTUK PAPARKAN DETAIL STAF (SHOW PAGE)
-    Route::get('/admin/staf/{user}', [StaffController::class, 'show'])->name('admin.staf.show');
-    //           ^^^^^^^^^^^^^^^^^ URL dengan parameter {user} (tanpa /show)
-    //                              ^^^^^ Method 'show' dalam StaffController
-    //                                          ^^^^^^^^^^^^^^^^ Nama route
-
-    // UBAH LALUAN INI:
-    Route::get('/admin/manage-staff', [StaffController::class, 'index'])->name('admin.manage');
-    // 'StaffController::class' merujuk kepada controller yang kita import
-    // 'index' adalah nama method dalam StaffController yang akan dipanggil
-
+        Route::get('/create', [StaffController::class, 'create'])->name('create'); // admin.staf.create
+        Route::post('/', [StaffController::class, 'store'])->name('store'); // admin.staf.store
+        Route::get('/{user}/edit', [StaffController::class, 'edit'])->name('edit'); // admin.staf.edit
+        Route::put('/{user}', [StaffController::class, 'update'])->name('update'); // admin.staf.update
+        Route::delete('/{user}', [StaffController::class, 'destroy'])->name('destroy'); // admin.staf.destroy
+        Route::get('/{user}', [StaffController::class, 'show'])->name('show'); // admin.staf.show
+    });
+    
+    // Laluan untuk senarai staf (menggunakan nama asal 'admin.manage')
+    Route::get('/manage-staff', [StaffController::class, 'index'])->name('manage'); // Nama route: admin.manage
 });
 
-    // LALUAN  UNTUK STAF (PROFIL SENDIRI)
-    // Semua laluan di sini memerlukan pengesahan (auth) dan peranan 'staf'
-    Route::middleware(['auth', 'role:' . \App\Enums\UserRole::STAF->value])->group(function () {
-
-        // Laluan untuk staf lihat profil sendiri
-        // URL: /staf/profil-saya
-        // Nama Route akan jadi: staf.profil.show (jika kita tambah ->name('staf.profil.') pada group)
-        // Buat masa sekarang kita namakan secara penuh dulu
-        Route::get('/staf/profil-saya', [StaffSelfProfileController::class, 'show'])->name('staf.profil.show');
-
-        // Laluan untuk staf paparkan borang edit profil sendiri
-        // URL: /staf/profil-saya/edit
-        // Nama Route: staf.profil.edit
-        Route::get('/staf/profil-saya/edit', [\App\Http\Controllers\StaffSelfProfileController::class, 'edit'])->name('staf.profil.edit');
-
-        // Laluan untuk staf kemaskini (update) profil sendiri
-        // URL: /staf/profil-saya/update (Method: PUT) - Saya ubah sikit URL untuk lebih jelas
-        // Nama Route: staf.profil.update
-        Route::put('/staf/profil-saya/update', [\App\Http\Controllers\StaffSelfProfileController::class, 'update'])->name('staf.profil.update');
-
-    });
-    // AKHIR TAMBAHAN: LALUAN KHAS UNTUK STAF
+// LALUAN UNTUK STAF (PROFIL SENDIRI)
+Route::middleware(['auth', 'role:' . UserRole::STAF->value])
+    ->prefix('staf/profil-saya') // Prefix URL
+    ->name('staf.profil.') // Prefix Nama Route
+    ->group(function () {
+    
+    Route::get('/', [StaffSelfProfileController::class, 'show'])->name('show'); // staf.profil.show
+    Route::get('/edit', [StaffSelfProfileController::class, 'edit'])->name('edit'); // staf.profil.edit
+    Route::put('/update', [StaffSelfProfileController::class, 'update'])->name('update'); // staf.profil.update
+    // Saya kekalkan /update di hujung URL untuk PUT di sini seperti permintaan awak sebelum ini
+});
 
 require __DIR__.'/auth.php';
