@@ -2,8 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Admin\StaffController;
+use App\Http\Controllers\Admin\StaffController; 
 use App\Enums\UserRole; // Import Enum jika guna nilai Enum secara terus
+use App\Http\Controllers\StaffSelfProfileController; 
 
 Route::get('/', function () {
     return view('welcome');
@@ -65,7 +66,29 @@ Route::middleware(['auth', 'role:'.UserRole::ADMIN->value])->group(function () {
     // 'StaffController::class' merujuk kepada controller yang kita import
     // 'index' adalah nama method dalam StaffController yang akan dipanggil
 
-    // Tambah laluan admin lain di sini
 });
+
+    // LALUAN  UNTUK STAF (PROFIL SENDIRI)
+    // Semua laluan di sini memerlukan pengesahan (auth) dan peranan 'staf'
+    Route::middleware(['auth', 'role:' . \App\Enums\UserRole::STAF->value])->group(function () {
+
+        // Laluan untuk staf lihat profil sendiri
+        // URL: /staf/profil-saya
+        // Nama Route akan jadi: staf.profil.show (jika kita tambah ->name('staf.profil.') pada group)
+        // Buat masa sekarang kita namakan secara penuh dulu
+        Route::get('/staf/profil-saya', [StaffSelfProfileController::class, 'show'])->name('staf.profil.show');
+
+        // Laluan untuk staf paparkan borang edit profil sendiri
+        // URL: /staf/profil-saya/edit
+        // Nama Route: staf.profil.edit
+        Route::get('/staf/profil-saya/edit', [\App\Http\Controllers\StaffSelfProfileController::class, 'edit'])->name('staf.profil.edit');
+
+        // Laluan untuk staf kemaskini (update) profil sendiri
+        // URL: /staf/profil-saya/update (Method: PUT) - Saya ubah sikit URL untuk lebih jelas
+        // Nama Route: staf.profil.update
+        Route::put('/staf/profil-saya/update', [\App\Http\Controllers\StaffSelfProfileController::class, 'update'])->name('staf.profil.update');
+
+    });
+    // AKHIR TAMBAHAN: LALUAN KHAS UNTUK STAF
 
 require __DIR__.'/auth.php';
