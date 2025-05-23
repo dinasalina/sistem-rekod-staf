@@ -29,7 +29,17 @@
                     @endif
                     {{-- AKHIR TAMBAHAN UNTUK PRIMARY NAVIGATION --}}
 
+
+                    {{-- AWAL TAMBAHAN: PAUTAN UNTUK STAF --}}
+                    @if (Auth::check() && Auth::user()->role->value === \App\Enums\UserRole::STAF->value)
+                        <x-nav-link :href="route('staf.profil.show')" :active="request()->routeIs('staf.profil.show') || request()->routeIs('staf.profil.edit')">
+                            {{ __('Profile Saya') }}
+                        </x-nav-link>
+                    @endif
+                    {{-- AKHIR TAMBAHAN: PAUTAN UNTUK STAF --}}
+
                 </div>
+
             </div>
 
             <div class="hidden sm:flex sm:items-center sm:ms-6">
