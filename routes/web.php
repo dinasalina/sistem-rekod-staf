@@ -5,6 +5,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\StaffController; 
 use App\Enums\UserRole; // Import Enum jika guna nilai Enum secara terus
 use App\Http\Controllers\StaffSelfProfileController; 
+use Illuminate\Support\Facades\Auth; // Pastikan Auth diimport
 
 Route::get('/', function () {
     return view('welcome');
@@ -12,6 +13,28 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function () {
     return view('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::get('/dashboard', function () {
+    $user = Auth::user();
+
+    if ($user->role->value === UserRole::STAF->value) {
+        // Jika pengguna adalah STAF, paparkan dashboard khas untuk staf
+        // Kita akan hantar data $user ke view ini juga
+        // View 'staf.dashboard' akan kita cipta pada langkah seterusnya
+        return view('staf.dashboard', ['user' => $user->load('staffDetail')]); 
+    } elseif ($user->role->value === UserRole::ADMIN->value) {
+        // Jika pengguna adalah ADMIN, redirect ke halaman utama admin
+        return redirect()->route('admin.staf.index'); // Atau 'admin.manage' jika awak masih guna nama tu
+    } elseif ($user->role->value === UserRole::SUPER_ADMIN->value) {
+        // Jika pengguna adalah SUPER ADMIN, redirect ke halaman utama super admin
+        return redirect()->route('superadmin.settings'); // Atau route utama super admin lain
+    }
+
+    // Fallback untuk pengguna lain yang disahkan tapi tiada peranan spesifik (jarang berlaku dalam kes kita)
+    // atau jika dashboard ini juga digunakan oleh peranan lain yang tidak perlukan redirect.
+    return view('dashboard'); // Paparkan dashboard Breeze generik
+
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
